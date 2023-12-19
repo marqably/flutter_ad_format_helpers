@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_ad_format_helpers/flutter_ad_format_helpers.dart';
-import 'package:flutter_ad_format_helpers_example/widgets/demo_banner.dart';
 
 void main() {
   runApp(const MyApp());
@@ -60,7 +59,7 @@ class AdFormatHelpersDemo extends StatelessWidget {
               color: Colors.grey,
               child: UnderstitialWrapper(
                 key: const Key('ad_0'),
-                adSize: const AdSize(width: 300, height: 1000),
+                adSize: const AdFormatAdSize(width: 300, height: 1000),
                 child: (updateBannerSize) => DemoBanner(
                   loadBanner: updateBannerSize,
                   width: 300,
@@ -80,7 +79,7 @@ class AdFormatHelpersDemo extends StatelessWidget {
               color: Colors.grey,
               child: UnderstitialWrapper(
                 key: const Key('ad_1'),
-                // adSize: const AdSize(width: 300, height: 250),
+                // adSize: const AdFormatAdSize(width: 300, height: 250),
                 padding: const EdgeInsets.symmetric(vertical: 30),
                 child: (updateBannerSize) => DemoBanner(
                   loadBanner: updateBannerSize,
@@ -102,7 +101,7 @@ class AdFormatHelpersDemo extends StatelessWidget {
               color: Colors.grey,
               child: UnderstitialWrapper(
                 key: const Key('ad_2'),
-                // adSize: const AdSize(width: 300, height: 1000),
+                // adSize: const AdFormatAdSize(width: 300, height: 1000),
                 child: (updateBannerSize) => DemoBanner(
                   loadBanner: updateBannerSize,
                   width: 300,
@@ -123,7 +122,7 @@ class AdFormatHelpersDemo extends StatelessWidget {
               color: Colors.grey,
               child: UnderstitialWrapper(
                 key: const Key('ad_3'),
-                // adSize: const AdSize(width: 300, height: 1000),
+                // adSize: const AdFormatAdSize(width: 300, height: 1000),
                 child: (updateBannerSize) => DemoBanner(
                   loadBanner: updateBannerSize,
                   width: 300,

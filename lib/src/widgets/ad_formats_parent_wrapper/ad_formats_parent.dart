@@ -141,40 +141,8 @@ class AdFormatsParent extends InheritedWidget {
 
   /// Removes the ad from being trackend and worked with
   void unregisterAd(String adString) {
+    // remove an element
     adFormatsAdItems.remove(adString);
-  }
-
-  /// Go through all ads and make sure our cached positions are up to date
-  void updateAdPositions() {
-    adFormatsAdItems = adFormatsAdItems.map((wrapperKey, adItem) {
-      final adItemWithOffset = _getAdItemOffsetPosition(wrapperKey, adItem);
-      final adItemBannerSize = _getAdItemBannerSize(wrapperKey, adItem);
-
-      if (adItemWithOffset != null || adItemBannerSize != null) {
-        return MapEntry(
-          wrapperKey,
-          adItem.copyWith(
-            yPosition: adItemWithOffset,
-            bannerSize: adItemBannerSize,
-          ),
-        );
-      }
-
-      return MapEntry(wrapperKey, adItem);
-    })
-        // now go through all entries and reset their position
-        .map((wrapperKey, adItem) {
-      adItem.offsetSetter
-          ?.call(0 - (adItem.yPosition ?? 0) + getWrapperOffsetTop());
-
-      return MapEntry(wrapperKey, adItem);
-    });
-
-    // if we got more then 1 element in the list and the adFormatsAdItemsScrollListener is not initialized yet -> do that
-    if (adFormatsAdItems.isNotEmpty && adFormatsAdItemsScrollListener == null) {
-      initScrollListener();
-      adFormatsAdItemsScrollListener = true;
-    }
 
     // if we have an initialized listener, but no entries anymore -> dispoes the listener to clean up
     if (adFormatsAdItems.isEmpty && adFormatsAdItemsScrollListener != null) {
@@ -183,18 +151,66 @@ class AdFormatsParent extends InheritedWidget {
     }
   }
 
+  /// Updates the position and size cache values for a given ad
+  AdFormatItem? updateAd(String idname) {
+    var adItem = adFormatsAdItems[idname];
+
+    // if not found -> do nothing
+    if (adItem == null) {
+      return null;
+    }
+
+    // otherwise set it
+    return adItem.copyWith(
+      yPosition: _getAdItemOffsetPosition(idname, adItem),
+      bannerSize: _getAdItemBannerSize(idname, adItem),
+    );
+  }
+
+  /// Go through all ads and make sure our cached positions are up to date
+  void updateAdPositions() {
+    adFormatsAdItems = adFormatsAdItems.map((wrapperKey, adItem) {
+      final newAdItem = updateAd(wrapperKey);
+
+      if (newAdItem != null) {
+        return MapEntry(wrapperKey, newAdItem);
+      }
+
+      return MapEntry(wrapperKey, adItem);
+    })
+        // now go through all entries and reset their position to make sure the starting position is correct
+        .map((wrapperKey, adItem) {
+      final bannerScrollOffset =
+          0 - (adItem.yPosition ?? 0) + getWrapperOffsetTop();
+
+      return MapEntry(
+          wrapperKey, adItem.copyWith(bannerScrollOffset: bannerScrollOffset));
+    });
+
+    // if we got more then 1 element in the list and the adFormatsAdItemsScrollListener is not initialized yet -> do that
+    if (adFormatsAdItems.isNotEmpty && adFormatsAdItemsScrollListener == null) {
+      initScrollListener();
+      adFormatsAdItemsScrollListener = true;
+    }
+  }
+
   /// uses the wrapperKey to get the current offset of an adItem on the screen, so we can use it to calculate the position
   double? _getAdItemOffsetPosition(
     String wrapperKey,
     AdFormatItem adItem,
   ) {
+    final RenderObject? parentRenderBox =
+        parentWrapperKey.currentContext?.findRenderObject();
     final RenderObject? renderBox =
         adItem.wrapperKey.currentContext?.findRenderObject();
 
-    if (renderBox is RenderBox) {
+    if (renderBox is RenderBox && parentRenderBox is RenderBox) {
+      final scrollOffset = scrollController.offset.toDouble();
       final positionRed = renderBox.localToGlobal(Offset.zero);
 
-      return positionRed.dy;
+      final offsetY = positionRed.dy + scrollOffset.toDouble();
+
+      return offsetY;
     }
 
     return null;
@@ -216,24 +232,24 @@ class AdFormatsParent extends InheritedWidget {
   }
 
   /// Calculates and sets the height of the banner, so we can use it inside of our widgettree
-  void updateBannerSize(
-    String idname,
-  ) {
-    var adItem = adFormatsAdItems[idname];
+  // void updateBannerSize(
+  //   String idname,
+  // ) {
+  //   var adItem = adFormatsAdItems[idname];
 
-    // if not found -> do nothing
-    if (adItem == null) {
-      return;
-    }
+  //   // if not found -> do nothing
+  //   if (adItem == null) {
+  //     return;
+  //   }
 
-    final RenderObject? renderBox =
-        adItem.bannerKey.currentContext?.findRenderObject();
+  //   final RenderObject? renderBox =
+  //       adItem.bannerKey.currentContext?.findRenderObject();
 
-    if (renderBox is RenderBox && renderBox.hasSize) {
-      // otherwise set it
-      adFormatsAdItems[idname]!.copyWith(bannerSize: renderBox.size);
-    }
-  }
+  //   if (renderBox is RenderBox && renderBox.hasSize) {
+  //     // otherwise set it
+  //     adFormatsAdItems[idname]!.copyWith(bannerSize: renderBox.size);
+  //   }
+  // }
 
   /// Check whether the ad is currently visible on the screen or not
   bool isAdInView(AdFormatItem adItem) {
@@ -307,6 +323,12 @@ class AdFormatsParent extends InheritedWidget {
 
       // calculate the current offset (because the banner itself needs to stay at exactly the same position while we scroll)
       adItem.offsetSetter?.call(newAdItem.bannerScrollOffset);
+
+      newAdItem = newAdItem.copyWith(
+        bannerScrollOffset: scrollOffset -
+            (_getAdItemOffsetPosition(wrapperKey, adItem) ?? 0) +
+            getWrapperOffsetTop(),
+      );
 
       return MapEntry(wrapperKey, newAdItem);
     });

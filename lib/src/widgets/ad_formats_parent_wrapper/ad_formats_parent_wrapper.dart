@@ -52,7 +52,11 @@ class _AdFormatsParentWrapperState extends State<AdFormatsParentWrapper> {
     if (context == null) return;
 
     // set the wrapper size
-    var newWrapperSize = (context.findRenderObject() as RenderBox?)?.size;
+    final parentRenderBox = context.findRenderObject() as RenderBox?;
+
+    if (parentRenderBox == null) return;
+
+    var newWrapperSize = parentRenderBox.size;
 
     // set the wrapper top offset
     var newWrapperTopOffset =

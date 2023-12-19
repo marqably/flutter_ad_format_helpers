@@ -2,11 +2,11 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_ad_format_helpers/src/widgets/ad_formats_parent_wrapper/ad_formats_parent.dart';
 
-class AdSize {
+class AdFormatAdSize {
   final double width;
   final double height;
 
-  const AdSize({required this.width, required this.height});
+  const AdFormatAdSize({required this.width, required this.height});
 }
 
 /// A banner ad that scrolls off with the content in a parallax effect
@@ -22,16 +22,20 @@ class UnderstitialWrapper extends StatefulWidget {
 
   final Widget Function(VoidCallback updateBannerSize) child;
   final EdgeInsets? padding;
-  final AdSize? adSize;
+  final AdFormatAdSize? adSize;
 
   @override
   UnderstitialWrapperState createState() => UnderstitialWrapperState();
 }
 
 class UnderstitialWrapperState extends State<UnderstitialWrapper> {
+  AdFormatsParent? adFormatsParent;
+
   GlobalKey elementKey = GlobalKey();
   GlobalKey bannerElementKey = GlobalKey();
   double undersitialOffset = 0;
+
+  Widget? renderChild;
 
   @override
   void initState() {
@@ -49,9 +53,17 @@ class UnderstitialWrapperState extends State<UnderstitialWrapper> {
           offsetSetter: (double offset) => setState(() {
             undersitialOffset = offset + (widget.padding?.top ?? 0);
           }),
+          visibilitySetter: (inView, isFirstLoad) {
+            if (isFirstLoad) {
+              setState(() {
+                renderChild = widget.child(updateBannerSize);
+              });
+            }
+          },
         ),
       );
     });
+
 
     super.initState();
   }
@@ -73,15 +85,35 @@ class UnderstitialWrapperState extends State<UnderstitialWrapper> {
     final AdFormatItem? adItem =
         AdFormatsParent.of(context).getAd(getKeyString());
 
+    // if the ad is not in view -> return a placeholder
+    if (renderChild == null || adItem == null) {
+      return Container(
+        alignment: Alignment.center,
+        height: wrapperHeight,
+        constraints: BoxConstraints(
+          minHeight: wrapperHeight,
+          maxHeight: wrapperHeight,
+        ),
+        key: elementKey,
+        child: Container(
+          key: bannerElementKey,
+        ),
+      );
+    }
+
     // if no ad in the list yet -> return a a placeholder
-    if (adItem == null) {
+    if (adItem.inView == false) {
       return Container(
         alignment: Alignment.center,
         height: wrapperHeight,
         key: elementKey,
+        constraints: BoxConstraints(
+          minHeight: wrapperHeight,
+          maxHeight: wrapperHeight,
+        ),
         child: Container(
           key: bannerElementKey,
-          child: widget.child(updateBannerSize),
+          child: renderChild,
         ),
       );
     }
@@ -101,7 +133,11 @@ class UnderstitialWrapperState extends State<UnderstitialWrapper> {
     final double centerPositionOffset =
         max((fillableWrapperHeight - bannerHeight) / 2, 0);
 
-    return SizedBox(
+    return Container(
+      constraints: BoxConstraints(
+        minHeight: wrapperHeight,
+        maxHeight: wrapperHeight,
+      ),
       key: elementKey,
       height: wrapperHeight,
       width: bannerWidth,
@@ -122,7 +158,7 @@ class UnderstitialWrapperState extends State<UnderstitialWrapper> {
                   scale: bannerScale,
                   child: Container(
                     key: bannerElementKey,
-                    child: widget.child(updateBannerSize),
+                    child: renderChild,
                   ),
                 ),
               ),
@@ -135,21 +171,26 @@ class UnderstitialWrapperState extends State<UnderstitialWrapper> {
 
   /// Updates the banner size
   void updateBannerSize() {
-    AdFormatsParent.of(context).updateBannerSize(getKeyString());
+    AdFormatsParent.of(context).updateAdPositions();
   }
 
   /// Allows us to either return the element key or even generate a new one, that
   /// is still unique to this element, by taking the parent key and adding a postfix to it
   String getKeyString([String? postfix]) {
     final parentKeyValue = (widget.key as ValueKey<String>).value;
-    return 'undersitial_$parentKeyValue$postfix';
+    return 'undersitial_$parentKeyValue${postfix ?? ''}';
+  }
+
+  @override
+  void didChangeDependencies() {
+    adFormatsParent = AdFormatsParent.of(context);
+    super.didChangeDependencies();
   }
 
   @override
   void dispose() {
     // remove this ad from the list of ads
-    AdFormatsParent.of(context).unregisterAd(getKeyString());
-
+    adFormatsParent?.unregisterAd(getKeyString());
     super.dispose();
   }
 }
