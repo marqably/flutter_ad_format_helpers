@@ -64,7 +64,6 @@ class UnderstitialWrapperState extends State<UnderstitialWrapper> {
       );
     });
 
-
     super.initState();
   }
 
